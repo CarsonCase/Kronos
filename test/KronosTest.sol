@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: UNLICENSED
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import {Kronos} from "../src/Kronos.sol";
@@ -25,10 +25,11 @@ contract KronosTest is Test {
     }
 
     // a workday happy path of a worker clocking in and out again after 8 hours earning that many tokens
-    function workday() public {
+    function testWorkday() public {
         vm.prank(worker1);
         kronos.clockIn();
-        vm.warp(8 hours);
+        skip(8 hours);
+        vm.prank(worker1);
         kronos.clockOut();
 
         assertEq(kronos.balanceOf(worker1), 8 hours);
