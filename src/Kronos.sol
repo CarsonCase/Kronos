@@ -7,11 +7,26 @@ import  {ERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.
 // But inw writting this code I noticed some not so happy things...
 contract Kronos is ERC20("TimeLock Tokens", "TLT"){
     mapping(address => bool) private _isManager;
-    mapping(address => uint) private _lastClocks;
+    mapping(address => Status) private _clockStatus;
+
+    struct Status{
+        bool clockedIn;
+        uint lastClock;
+    }
+
+    error AccessError(address caller);
+    error RepeatClock();
+
+    constructor(){
+        _isManager[msg.sender] = true;
+    }
 
     function setNewManager(address _newManger) external {
-        /// todo access control
-        _isManager[_newManger] = true;
+        if(_isManager[msg.sender]){
+            _isManager[_newManger] = true;
+        }else{
+            revert AccessError(msg.sender);
+        }
     }
 
     function isManager(address _account) external view returns(bool){
@@ -19,15 +34,22 @@ contract Kronos is ERC20("TimeLock Tokens", "TLT"){
     }
 
     function clockIn() external{
-        // todo access control
-        _lastClocks[msg.sender] = block.timestamp;
+        if(!_clockStatus[msg.sender].clockedIn){
+            _clockStatus[msg.sender] = Status(true, block.timestamp);
+        }else{
+            revert RepeatClock();
+        }
     }
 
     function clockOut() external{
-        // todo access control
-        uint clockInTime = _lastClocks[msg.sender];
-        uint clockOutTime = block.timestamp;
-        _lastClocks[msg.sender] = clockOutTime;
-        _mint(msg.sender, clockOutTime - clockInTime);
+        if(_clockStatus[msg.sender].clockedIn){
+            _clockStatus[msg.sender].clockedIn = false;
+            uint clockInTime = _clockStatus[msg.sender].lastClock;
+            uint clockOutTime = block.timestamp;
+            _clockStatus[msg.sender].lastClock = clockOutTime;
+            _mint(msg.sender, clockOutTime - clockInTime);
+        }else{
+            revert RepeatClock();
+        }
     }
 }
