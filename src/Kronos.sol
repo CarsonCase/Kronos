@@ -45,8 +45,8 @@ contract Kronos is ERC20("TimeLock Tokens", "TLT"){
         Status memory statusMemory = _clockStatus[msg.sender];
         Status storage statusStorage = _clockStatus[msg.sender];
         if(statusMemory.clockedIn){
-            _clockStatus[msg.sender].clockedIn = false;
-            uint clockInTime = statusStorage.lastClock;
+            statusStorage.clockedIn = false;
+            uint clockInTime = statusMemory.lastClock;
             uint clockOutTime = block.timestamp;
             statusStorage.lastClock = clockOutTime;
             _mint(msg.sender, clockOutTime - clockInTime);
