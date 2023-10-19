@@ -18,26 +18,6 @@ contract KronosTest is Test {
         kronos = new Kronos();
     }
 
-    // set up a new manager and make sure they have manager permissions
-    function testNewManager() public {
-        //epect a non-manager to fail to set a new manager
-        bytes4 selector = bytes4(keccak256("AccessError(address)"));
-        vm.expectRevert(abi.encodeWithSelector(selector, worker1));
-        vm.prank(worker1);
-        kronos.setNewManager(manager2);
-
-        // expect a manager to be able to set a new manager
-        vm.prank(manager1);
-        kronos.setNewManager(manager2);
-        assertEq(kronos.isManager(manager2), true);
-
-        // finally the new manager should be able to set another manager
-        vm.prank(manager2);
-        kronos.setNewManager(manager3);
-        assertEq(kronos.isManager(manager3), true);
-
-    }
-
     // a workday happy path of a worker clocking in and out again after 8 hours earning that many tokens
     function testWorkday() public {
         // Clock in
@@ -64,5 +44,30 @@ contract KronosTest is Test {
         vm.prank(worker1);
         kronos.clockOut();
     }
+
+    // set up a new manager and make sure they have manager permissions
+    function testNewManager() public {
+        //epect a non-manager to fail to set a new manager
+        bytes4 selector = bytes4(keccak256("AccessError(address)"));
+        vm.expectRevert(abi.encodeWithSelector(selector, worker1));
+        newManager(worker1, worker1, true);
+
+        // expect a manager to be able to set a new manager
+        newManager(manager1, manager2, false);
+
+        // finally the new manager should be able to set another manager
+        newManager(manager2, manager3, false);
+
+    }
+
+    // helper function to test the newManager function
+    function newManager(address caller, address manager, bool shouldError) internal{
+        vm.prank(caller);
+        kronos.setNewManager(manager);
+        if(!shouldError){
+            assertEq(kronos.isManager(manager), true);
+        }
+    }
+
 
 }

@@ -42,11 +42,13 @@ contract Kronos is ERC20("TimeLock Tokens", "TLT"){
     }
 
     function clockOut() external{
-        if(_clockStatus[msg.sender].clockedIn){
+        Status memory statusMemory = _clockStatus[msg.sender];
+        Status storage statusStorage = _clockStatus[msg.sender];
+        if(statusMemory.clockedIn){
             _clockStatus[msg.sender].clockedIn = false;
-            uint clockInTime = _clockStatus[msg.sender].lastClock;
+            uint clockInTime = statusStorage.lastClock;
             uint clockOutTime = block.timestamp;
-            _clockStatus[msg.sender].lastClock = clockOutTime;
+            statusStorage.lastClock = clockOutTime;
             _mint(msg.sender, clockOutTime - clockInTime);
         }else{
             revert RepeatClock();
