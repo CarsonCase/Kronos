@@ -2,14 +2,15 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
+import {Kronos} from "../src/Kronos.sol";
 
 contract KronosTest is Test {
     Kronos public kronos;
 
-    address manager1 = 0x0001;
-    address manager2 = 0x0002;
+    address manager1 = address(0x0001);
+    address manager2 = address(0x0002);
 
-    address worker1 = 0x1000;
+    address worker1 = address(0x1000);
     // set up the timeClock, deployer is the manager
     function setUp() public {
         vm.prank(manager1);
