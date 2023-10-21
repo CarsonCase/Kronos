@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.20;
 
-import  {ERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import  {ERC20, IERC20} from "../lib/openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import  {ERC4626} from "../lib/openzeppelin-contracts/contracts/token/ERC20/extensions/ERC4626.sol";
 
-// Happy path passes! 
-// But inw writting this code I noticed some not so happy things...
-contract Kronos is ERC20("TimeLock Tokens", "TLT"){
+// New inheritance
+contract Kronos is ERC4626{
+    IERC20 public underlying;
+
     mapping(address => bool) private _isManager;
     mapping(address => Status) private _clockStatus;
 
@@ -17,8 +19,15 @@ contract Kronos is ERC20("TimeLock Tokens", "TLT"){
     error AccessError(address caller);
     error RepeatClock();
 
-    constructor(){
+    // New constructor
+    constructor(IERC20 _underlying) ERC4626(_underlying) ERC20("TimeLock Tokens", "TLT"){
         _isManager[msg.sender] = true;
+        underlying = _underlying;
+    }
+
+    // New function
+    function pay(uint _amount) external{
+
     }
 
     function setNewManager(address _newManger) external {

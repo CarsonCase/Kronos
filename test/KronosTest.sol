@@ -3,19 +3,47 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import {Kronos} from "../src/Kronos.sol";
+import {TestToken} from "../src/TestToken.sol";
 
 contract KronosTest is Test {
     Kronos public kronos;
+    TestToken public token;
 
     address manager1 = address(0x0001);
     address manager2 = address(0x0002);
     address manager3 = address(0x0003);
 
     address worker1 = address(0x1000);
+
+    address customer1 = address(0xffff);
     // set up the timeClock, deployer is the manager
+    // also set up the test token and give customers tokens
     function setUp() public {
+        token = new TestToken();
         vm.prank(manager1);
-        kronos = new Kronos();
+        kronos = new Kronos(token);
+        token.mint(customer1, 1 ether);
+    }
+
+    function testPOS() public {
+        // first simulate a workers workday
+        testWorkday();
+        // assert they are not entitled any tokens yet
+        assertEq(kronos.maxWithdraw(worker1), 0);
+
+        // now test a customer paying 1 ether
+        vm.prank(customer1);
+        token.approve(address(kronos), 1 ether);
+        vm.prank(customer1);
+        kronos.pay(1 ether);
+
+        // When a user pays asser the tokens are now in kronos
+        uint balKronos = token.balanceOf(address(kronos));
+        assertEq(balKronos, 1 ether);
+
+        // after a workday assert the worker is now entitled to those tokens
+        assertEq(kronos.maxWithdraw(worker1), 1 ether);
+
     }
 
     // a workday happy path of a worker clocking in and out again after 8 hours earning that many tokens
