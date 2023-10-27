@@ -18,6 +18,7 @@ contract Kronos is ERC4626{
 
     error AccessError(address caller);
     error RepeatClock();
+    error HoursError();
 
     // New constructor
     constructor(IERC20 _underlying) ERC4626(_underlying) ERC20("TimeLock Tokens", "TLT"){
@@ -57,6 +58,10 @@ contract Kronos is ERC4626{
             statusStorage.clockedIn = false;
             uint clockInTime = statusMemory.lastClock;
             uint clockOutTime = block.timestamp;
+
+            if (clockOutTime - clockInTime == 0){
+                revert HoursError();
+            }
             statusStorage.lastClock = clockOutTime;
             _mint(msg.sender, (clockOutTime - clockInTime) * 1 ether);
         }else{

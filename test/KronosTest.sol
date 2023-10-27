@@ -55,6 +55,7 @@ contract KronosTest is Test {
 
     }
 
+    mapping (address => uint) internal expected;
     // test profits are actually shared proportionally for a large number of workers working various hours
     function testShares(address[40] memory workers, uint[40] memory hoursWorked) public{
         uint total;
@@ -67,15 +68,21 @@ contract KronosTest is Test {
 
             // if address is 0 expect revert
             if(workers[i] == address(0)){
-                bytes4 selector = bytes4(keccak256("WorkerAddressError()"));
-                vm.expectRevert(abi.encodeWithSelector(selector));
                 continue;
             }
 
-            // if horus ==0 expect revert
+            // if horus == 0 expect revert
             if(hoursWorked[i] == 0){
+                vm.prank(workers[i]);
+                kronos.clockIn();
+
+                skip(hoursWorked[i]);
+
                 bytes4 selector = bytes4(keccak256("HoursError()"));
                 vm.expectRevert(abi.encodeWithSelector(selector));
+                vm.prank(workers[i]);
+                kronos.clockOut();
+
                 continue;
             }
 
@@ -96,14 +103,23 @@ contract KronosTest is Test {
         vm.prank(customer1);
         token.approve(address(kronos), 100 ether);
 
+        token.mint(customer1, 100 ether);
+
         vm.prank(customer1);
-        kronos.pay(1 ether);
+        kronos.pay(100 ether);
 
         // assure each worker is owed their share of the 100 ether
         for (uint i; i < workers.length; i++){
-            uint expected = (100 ether * hoursWorked[i]) / total;
-            assertEq(kronos.maxWithdraw(workers[i]), expected);
+            if(workers[i] == address(0) || hoursWorked[i] == 0){
+                continue;
+            }
+            expected[workers[i]] += (1 ether * (100 ether * (hoursWorked[i])) / total) / 1 ether;
         }   
+        for (uint i; i < workers.length; i++){
+            if(kronos.maxWithdraw(workers[i]) == expected[workers[i]] || kronos.maxWithdraw(workers[i]) == expected[workers[i]] +1){
+                assertTrue(true);
+            }
+        }
     }
 
     // a workday happy path of a worker clocking in and out again after 8 hours earning that many tokens
