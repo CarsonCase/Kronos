@@ -23,6 +23,7 @@ contract KronosTest is Test {
         vm.prank(manager1);
         kronos = new Kronos(token);
         token.mint(customer1, 1 ether);
+
     }
 
     function testPOS() public {
@@ -34,16 +35,75 @@ contract KronosTest is Test {
         // now test a customer paying 1 ether
         vm.prank(customer1);
         token.approve(address(kronos), 1 ether);
+
+        vm.prank(customer1);
+        token.approve(address(kronos), 1 ether);
+
         vm.prank(customer1);
         kronos.pay(1 ether);
 
-        // When a user pays asser the tokens are now in kronos
+        // When a user pays assert the tokens are now in kronos
         uint balKronos = token.balanceOf(address(kronos));
         assertEq(balKronos, 1 ether);
+
+        assertEq(balKronos, token.totalSupply());
+        
+        assertEq(kronos.balanceOf(worker1), kronos.totalSupply());
 
         // after a workday assert the worker is now entitled to those tokens
         assertEq(kronos.maxWithdraw(worker1), 1 ether);
 
+    }
+
+    // test profits are actually shared proportionally for a large number of workers working various hours
+    function testShares(address[40] memory workers, uint[40] memory hoursWorked) public{
+        uint total;
+
+        // first loop
+        for (uint i; i < workers.length; i++){
+
+            // Assume a worker cannot work more than 24 hours
+            hoursWorked[i] %= 24 hours;
+
+            // if address is 0 expect revert
+            if(workers[i] == address(0)){
+                bytes4 selector = bytes4(keccak256("WorkerAddressError()"));
+                vm.expectRevert(abi.encodeWithSelector(selector));
+                continue;
+            }
+
+            // if horus ==0 expect revert
+            if(hoursWorked[i] == 0){
+                bytes4 selector = bytes4(keccak256("HoursError()"));
+                vm.expectRevert(abi.encodeWithSelector(selector));
+                continue;
+            }
+
+            // clock in and out
+            vm.prank(workers[i]);
+            kronos.clockIn();
+
+            skip(hoursWorked[i]);
+
+            vm.prank(workers[i]);
+            kronos.clockOut();
+
+            // note the increase in total hours worked
+            total += hoursWorked[i];
+        }
+        
+        // have a customer pay some large payment of 100 ether
+        vm.prank(customer1);
+        token.approve(address(kronos), 100 ether);
+
+        vm.prank(customer1);
+        kronos.pay(1 ether);
+
+        // assure each worker is owed their share of the 100 ether
+        for (uint i; i < workers.length; i++){
+            uint expected = (100 ether * hoursWorked[i]) / total;
+            assertEq(kronos.maxWithdraw(workers[i]), expected);
+        }   
     }
 
     // a workday happy path of a worker clocking in and out again after 8 hours earning that many tokens
@@ -65,7 +125,7 @@ contract KronosTest is Test {
         vm.prank(worker1);
         kronos.clockOut();
 
-        assertEq(kronos.balanceOf(worker1), 8 hours);
+        assertEq(kronos.balanceOf(worker1), 8 hours * 1 ether);
 
         // Fail to clock out a second time
         vm.expectRevert(abi.encodeWithSelector(selector));

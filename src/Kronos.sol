@@ -27,7 +27,7 @@ contract Kronos is ERC4626{
 
     // New function
     function pay(uint _amount) external{
-
+        underlying.transferFrom(msg.sender, address(this), _amount);
     }
 
     function setNewManager(address _newManger) external {
@@ -58,7 +58,7 @@ contract Kronos is ERC4626{
             uint clockInTime = statusMemory.lastClock;
             uint clockOutTime = block.timestamp;
             statusStorage.lastClock = clockOutTime;
-            _mint(msg.sender, clockOutTime - clockInTime);
+            _mint(msg.sender, (clockOutTime - clockInTime) * 1 ether);
         }else{
             revert RepeatClock();
         }
